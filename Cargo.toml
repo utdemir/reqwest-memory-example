@@ -1,0 +1,11 @@
+[package]
+name = "reqwest-memory-example"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "time"] }
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "stream", "http2"] }
+memory-stats = "1"
+futures-util = "0.3"
+ureq = "3"
