@@ -1,15 +1,17 @@
-//! ureq variant of the load harness. Standalone — shares no code with the other
-//! binaries. Instead of reqwest's async client, this uses `ureq`, a synchronous
-//! (blocking) HTTP client, driven from the Tokio runtime via `spawn_blocking`.
+//! ureq streaming variant of the load harness. Standalone — shares no code with
+//! the other binaries. Instead of reqwest's async client, this uses `ureq`, a
+//! synchronous (blocking) HTTP client, driven from the Tokio runtime via
+//! `spawn_blocking`.
 //!
 //! Each of the WORKERS async tasks loops, and on every iteration offloads one
 //! blocking ureq request onto Tokio's blocking thread pool with
 //! `tokio::task::spawn_blocking`. A single `ureq::Agent` is shared across all of
 //! them (it is Arc-backed and cheap to clone, so all clones reuse one connection
 //! pool). The response body is streamed to a sink so a whole `.ts` segment is
-//! never buffered in memory.
+//! never buffered in memory — the only difference from `ureq_collecting` is this
+//! body handling.
 //!
-//! Run with: `cargo run --release --bin ureq_blocking`
+//! Run with: `cargo run --release --bin ureq_streaming`
 
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
@@ -45,7 +47,7 @@ async fn main() {
     tokio::spawn(reporter(Arc::clone(&requests)));
 
     println!(
-        "[ureq_blocking] Started {WORKERS} workers against {URL}\nReporting memory every {}s. Press Ctrl-C to stop.",
+        "[ureq_streaming] Started {WORKERS} workers against {URL}\nReporting memory every {}s. Press Ctrl-C to stop.",
         REPORT_INTERVAL.as_secs()
     );
 
@@ -108,11 +110,11 @@ async fn reporter(requests: Arc<AtomicU64>) {
                 let phys_mb = usage.physical_mem as f64 / (1024.0 * 1024.0);
                 let virt_mb = usage.virtual_mem as f64 / (1024.0 * 1024.0);
                 println!(
-                    "[ureq_blocking] mem: phys {phys_mb:8.2} MB | virt {virt_mb:8.2} MB | requests: {total} total, {per_sec:.1}/s"
+                    "[ureq_streaming] mem: phys {phys_mb:8.2} MB | virt {virt_mb:8.2} MB | requests: {total} total, {per_sec:.1}/s"
                 );
             }
             None => {
-                println!("[ureq_blocking] mem: <unavailable> | requests: {total} total, {per_sec:.1}/s");
+                println!("[ureq_streaming] mem: <unavailable> | requests: {total} total, {per_sec:.1}/s");
             }
         }
     }
